@@ -86,11 +86,12 @@ var ver = flag.Bool("v", false, "")
 var vi = flag.Bool("V", false, "")
 var httping = flag.Bool("H", false, "")
 var sslping = flag.Bool("S", false, "")
+var resultFile = flag.String("r", "", "")
 
 /*This Used by func flag.Usage()*/
 var usage = `
 Usage:
-    pexpo | pexpo.exe [-v] [-h] [-i interval] [-t timeout] [-f ping-list] [-A] [-H] [-S] [-V]
+    pexpo | pexpo.exe [-v] [-h] [-i interval] [-t timeout] [-f ping-list] [-r resule-file] [-A] [-H] [-S] [-V]
 Examples:
     ./pexpo -i 500ms -t 1s -f /usr/local/ping-list.txt
     pexpo.exe -i 500ms -t 1s -f C:\Users\arale\Desktop\ping-list.txt
@@ -103,6 +104,7 @@ Option:
        You must not use "200" or "1" or..., must use "200ms" or "1s" or ... , so use with time's unit.
        this "timeout" is Exact meaning, fastping.NewPinger() receives OnRecv struct value interval.
     -f Using Filepath of ping-list(Default:current_dir/ping-list.txt).
+    -r Using Filepath of result-file(Default:host_dir/.pexpo/result_day.txt).
     -A If you want to write on ping-list -- such as Cisco's show ip arp -- , 
        "Internet  10.0.0.1                0   ca01.18cc.0038  ARPA   Ethernet2/0",
        Ignoring string "Internet", So It is good as you copy&paste show ip arp line.
@@ -167,16 +169,10 @@ func fatal(err error) {
 	}
 }
 
-func addog(text string, filename string) {
-	var writer *bufio.Writer
+func addog(text string, writer *bufio.Writer) {
 	textData := []byte(text)
-
-	writeFile, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
-	writer = bufio.NewWriter(writeFile)
 	writer.Write(textData)
 	writer.Flush()
-	fatal(err)
-	defer writeFile.Close()
 }
 
 func round(f float64, places int) float64 {
@@ -544,12 +540,21 @@ func drawLoop(maxX, maxY int, pauser *Pauser) {
 	drawHostlist(maxX, maxY)
 
 	/*making logging file*/
-	day := time.Now()
-	formatingDay := day.Format(DAY)
-	result := "result_" + formatingDay + ".txt"
+	result := *resultFile
+	if len(result) == 0 {
+		day := time.Now()
+		formatingDay := day.Format(DAY)
+		result = "result_" + formatingDay + ".txt"
+	}
 	u, err := user.Current()
 	fatal(err)
 	rfile := filepath.Join(u.HomeDir, RESULT_DIR, result)
+
+	writeFile, err := os.OpenFile(rfile, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
+	fatal(err)
+	// writeFile, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
+	writer := bufio.NewWriter(writeFile)
+	defer writeFile.Close()
 
 	/*drawing column*/
 	drawLine(maxX-44, 0, "Ctrl+S: Stop & Restart, Esc or Ctrl+C: Exit.")
@@ -662,7 +667,7 @@ func drawLoop(maxX, maxY int, pauser *Pauser) {
 			date := time.Now()
 			formatingDate := date.Format(DATE)
 			log := "[" + formatingDate + "]" + " " + strings.Join(pres, " ") + "\n"
-			addog(log, rfile)
+			addog(log, writer)
 
 			host.LossPercent = round(percent.PercentOf(host.Loss, j), 2)
 

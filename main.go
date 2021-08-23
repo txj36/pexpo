@@ -540,19 +540,17 @@ func drawLoop(maxX, maxY int, pauser *Pauser) {
 	drawHostlist(maxX, maxY)
 
 	/*making logging file*/
-	result := *resultFile
-	if len(result) == 0 {
+	rfile := *resultFile
+	if len(rfile) == 0 {
 		day := time.Now()
 		formatingDay := day.Format(DAY)
-		result = "result_" + formatingDay + ".txt"
+		result := "result_" + formatingDay + ".txt"
+		u, err := user.Current()
+		fatal(err)
+		rfile = filepath.Join(u.HomeDir, RESULT_DIR, result)
 	}
-	u, err := user.Current()
-	fatal(err)
-	rfile := filepath.Join(u.HomeDir, RESULT_DIR, result)
-
 	writeFile, err := os.OpenFile(rfile, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	fatal(err)
-	// writeFile, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
 	writer := bufio.NewWriter(writeFile)
 	defer writeFile.Close()
 

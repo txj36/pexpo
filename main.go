@@ -169,10 +169,16 @@ func fatal(err error) {
 	}
 }
 
-func addog(text string, writer *bufio.Writer) {
+func addog(text string, filename string) {
+	var writer *bufio.Writer
 	textData := []byte(text)
+
+	writeFile, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
+	writer = bufio.NewWriter(writeFile)
 	writer.Write(textData)
 	writer.Flush()
+	fatal(err)
+	defer writeFile.Close()
 }
 
 func round(f float64, places int) float64 {
@@ -549,10 +555,10 @@ func drawLoop(maxX, maxY int, pauser *Pauser) {
 		fatal(err)
 		rfile = filepath.Join(u.HomeDir, RESULT_DIR, result)
 	}
-	writeFile, err := os.OpenFile(rfile, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
-	fatal(err)
-	writer := bufio.NewWriter(writeFile)
-	defer writeFile.Close()
+	// writeFile, err := os.OpenFile(rfile, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
+	// fatal(err)
+	// writer := bufio.NewWriter(writeFile)
+	// defer writeFile.Close()
 
 	/*drawing column*/
 	drawLine(maxX-44, 0, "Ctrl+S: Stop & Restart, Esc or Ctrl+C: Exit.")
@@ -665,7 +671,7 @@ func drawLoop(maxX, maxY int, pauser *Pauser) {
 			date := time.Now()
 			formatingDate := date.Format(DATE)
 			log := "[" + formatingDate + "]" + " " + strings.Join(pres, " ") + "\n"
-			addog(log, writer)
+			addog(log, rfile)
 
 			host.LossPercent = round(percent.PercentOf(host.Loss, j), 2)
 
